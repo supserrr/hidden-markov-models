@@ -1,0 +1,6 @@
+path,activity,split,source,sample_rate_hz,duration_s,n_rows
+data/raw/standing/standing_PLACEHOLDER.csv,standing,train,placeholder,,,0
+data/raw/walking/walking_PLACEHOLDER.csv,walking,train,placeholder,,,0
+data/raw/jumping/jumping_PLACEHOLDER.csv,jumping,train,placeholder,,,0
+data/raw/still/still_PLACEHOLDER.csv,still,train,placeholder,,,0
+data/sequences/sequence_PLACEHOLDER.csv,mixed,train,placeholder,,,0

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
-from src.data import read_manifest, read_recording, repo_root
+from src.data import read_recording, recording_rows, repo_root
 from src.evaluate import confusion_matrix, majority_label, per_class_metrics
 from src.features import (
     ACTIVITIES,
@@ -46,7 +46,12 @@ def _sequence(path):
 def load_splits(root=None):
     root = Path(root) if root else repo_root()
     groups = {"train": [], "test": []}
-    for row in read_manifest(root):
+    rows = recording_rows(root)
+    if not rows:
+        raise FileNotFoundError(
+            "No recordings yet. Replace the placeholder files listed in data/manifest.csv."
+        )
+    for row in rows:
         item = _sequence(root / row["path"])
         item["meta"] = row
         groups[row["split"]].append(item)
@@ -192,7 +197,7 @@ def run(root=None):
     rates = {}
     durations = {name: 0.0 for name in ACTIVITIES}
     file_counts = {name: 0 for name in ACTIVITIES}
-    for row in read_manifest(root):
+    for row in recording_rows(root):
         rates[row["sample_rate_hz"]] = rates.get(row["sample_rate_hz"], 0) + 1
         if row["activity"] in durations:
             durations[row["activity"]] += float(row["duration_s"])

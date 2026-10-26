@@ -2,7 +2,7 @@
 
 Formative 2 for Machine Learning Techniques. A diagonal Gaussian hidden Markov model, written in NumPy, reads windowed accelerometer and gyroscope features and decodes four activities: standing, walking, jumping, and still.
 
-There are no recordings in this repository. Put real sensor exports in `data/raw/<activity>/` and list them in `data/manifest.csv`. The brief also asks for four face-visible videos, one per activity. Those videos are not in this repository.
+The files named `PLACEHOLDER` are empty templates. Replace each one with a real export, or add new CSVs beside them, and change that manifest row from `placeholder` to `sensor-logger`. Rows marked `placeholder` are not used for training.
 
 ## Layout
 
@@ -24,6 +24,17 @@ timestamp,acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z,activity
 ```
 
 `timestamp` is seconds. Acceleration is m/s². Gyroscope is rad/s. `activity` is `standing`, `walking`, `jumping`, or `still`.
+
+## Videos
+
+Paste one face-visible link per activity. A missing video is an immediate zero on the brief.
+
+| Activity | Link |
+| --- | --- |
+| Standing | PASTE_LINK |
+| Walking | PASTE_LINK |
+| Jumping | PASTE_LINK |
+| Still | PASTE_LINK |
 
 ## Reproduce
 

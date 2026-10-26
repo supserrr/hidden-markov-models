@@ -56,6 +56,16 @@ def read_manifest(root=None):
         return list(csv.DictReader(handle))
 
 
+def recording_rows(root=None):
+    """Manifest rows for real recordings. Rows marked placeholder are skipped."""
+    kept = []
+    for row in read_manifest(root):
+        if str(row.get("source", "")).strip().lower() == "placeholder":
+            continue
+        kept.append(row)
+    return kept
+
+
 def write_recording(path, timestamps, acc, gyro, activities):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
