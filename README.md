@@ -17,7 +17,7 @@ Tested on 40 unseen recordings, 581 one-second windows:
 | Jumping | 149 | 1.000 | 1.000 | 1.000 |
 | Still | 160 | 1.000 | 1.000 | 1.000 |
 
-All recordings come from one person, phone, and session, so this shows the activities are separable here, not that the model transfers to other people. The [report](report/Formative_2_Hidden_Markov_Models.docx) and the [notebook](notebooks/hmm_activity_recognition.ipynb) have the details.
+All recordings come from one person, phone, and session, so this shows the activities are separable here, not that the model transfers to other people. The [report](report/Formative_2_Hidden_Markov_Models.pdf) and the [notebook](notebooks/hmm_activity_recognition.ipynb) have the details.
 
 ## Run it
 
