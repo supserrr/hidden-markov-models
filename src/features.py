@@ -24,6 +24,21 @@ FEATURE_NAMES = [
     "gyro_dom_freq",
 ]
 
+# Magnitude and energy features span about seven orders of magnitude, from a
+# phone on a desk to a landing. On that scale a z-score is set by jumping, and
+# standing and still end up closer together than the variance floor of one
+# Gaussian, so Baum-Welch merges them. A log puts each of these features on a
+# scale where a Gaussian per state fits and the quiet pair stays apart.
+LOG_FEATURES = [
+    "acc_mag_mean",
+    "acc_mag_var",
+    "acc_mag_rms",
+    "sma",
+    "acc_spectral_energy",
+    "gyro_mag_mean",
+]
+LOG_FLOOR = 1e-6
+
 
 def resample(timestamps, acc, gyro, fs=TARGET_FS):
     """Linear interpolation onto a uniform grid. Uses the timestamp column."""
@@ -126,18 +141,35 @@ def frames_from_resampled(acc, gyro, activities, fs=TARGET_FS, window=WINDOW, ho
     return np.stack(rows), np.asarray(labels), np.asarray(centers)
 
 
-class ZScore:
-    """Training-set z-score. Test windows use these same mean and scale values."""
+def log_compress(features):
+    """log10 of the LOG_FEATURES columns. The other columns pass through."""
+    out = np.array(features, dtype=float, copy=True)
+    columns = [FEATURE_NAMES.index(name) for name in LOG_FEATURES]
+    out[:, columns] = np.log10(out[:, columns] + LOG_FLOOR)
+    return out
 
-    def __init__(self):
+
+class FeatureScaler:
+    """Log of the magnitude features, then a training-set z-score.
+
+    Test windows use the same mean and scale values as training. `log=False`
+    keeps the plain z-score, which the notebook uses to show why the log is there.
+    """
+
+    def __init__(self, log=True):
+        self.log = bool(log)
         self.mean_ = None
         self.scale_ = None
 
+    def _prepare(self, features):
+        return log_compress(features) if self.log else np.asarray(features, dtype=float)
+
     def fit(self, features):
-        self.mean_ = features.mean(axis=0)
-        scale = features.std(axis=0)
+        prepared = self._prepare(features)
+        self.mean_ = prepared.mean(axis=0)
+        scale = prepared.std(axis=0)
         self.scale_ = np.where(scale < 1e-8, 1.0, scale)
         return self
 
     def transform(self, features):
-        return (features - self.mean_) / self.scale_
+        return (self._prepare(features) - self.mean_) / self.scale_

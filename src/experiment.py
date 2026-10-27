@@ -11,15 +11,27 @@ from src.data import read_recording, recording_rows, repo_root
 from src.evaluate import confusion_matrix, majority_label, per_class_metrics
 from src.features import (
     ACTIVITIES,
+    FEATURE_NAMES,
     HOP,
     TARGET_FS,
     WINDOW,
-    ZScore,
+    FeatureScaler,
     frames_from_resampled,
     resample,
 )
 from src.hmm import GaussianHMM, self_test
-from src.plots import plot_decoded, plot_heatmap, plot_likelihood, plot_raw_magnitude
+from src.plots import (
+    plot_decoded,
+    plot_emissions,
+    plot_heatmap,
+    plot_likelihood,
+    plot_raw_magnitude,
+)
+
+# Order of held-out files joined end to end when there is no mixed recording.
+# It runs from rest to the most active state and back down, so the decoder has
+# to make every change in both directions.
+JOIN_ORDER = ["still", "standing", "walking", "jumping", "walking", "standing", "still"]
 
 
 def _sequence(path):
@@ -49,7 +61,7 @@ def load_splits(root=None):
     rows = recording_rows(root)
     if not rows:
         raise FileNotFoundError(
-            "No recordings yet. Replace the placeholder files listed in data/manifest.csv."
+            "No recordings yet. Run `python -m src.convert` to build data/ from RECORDINGS/."
         )
     for row in rows:
         item = _sequence(root / row["path"])
@@ -58,10 +70,10 @@ def load_splits(root=None):
     return groups
 
 
-def fit_model(splits):
+def fit_model(splits, log=True):
     train = splits["train"]
     raw = np.concatenate([item["features"] for item in train], axis=0)
-    scaler = ZScore().fit(raw)
+    scaler = FeatureScaler(log=log).fit(raw)
     sequences = [scaler.transform(item["features"]) for item in train]
     labels = [item["labels"] for item in train]
     model = GaussianHMM(n_states=len(ACTIVITIES), n_features=raw.shape[1])
@@ -81,24 +93,16 @@ def _clone_params(model):
     }
 
 
-def _score_items(model, scaler, items):
+def score_items(model, scaler, items):
     truth = []
     predicted = []
     file_hits = []
-    decoded_example = None
     for item in items:
         features = scaler.transform(item["features"])
         path = model.viterbi(features)
         truth.append(item["labels"])
         predicted.append(path)
         file_hits.append(int(majority_label(path) == majority_label(item["labels"])))
-        if decoded_example is None and item["meta"]["activity"] == "mixed":
-            decoded_example = {
-                "centers": item["centers"],
-                "truth": item["labels"],
-                "predicted": path,
-                "path": item["meta"]["path"],
-            }
     truth = np.concatenate(truth)
     predicted = np.concatenate(predicted)
     matrix = confusion_matrix(truth, predicted, len(ACTIVITIES))
@@ -110,11 +114,10 @@ def _score_items(model, scaler, items):
         "file_accuracy": float(np.mean(file_hits)) if file_hits else 0.0,
         "n_frames": int(len(truth)),
         "n_files": len(items),
-        "decoded_example": decoded_example,
     }
 
 
-def _score_with_params(model, scaler, items, params):
+def score_with_params(model, scaler, items, params):
     """Score a saved parameter set, then put the fitted parameters back."""
     current = _clone_params(model)
     model.pi = params["pi"]
@@ -122,12 +125,71 @@ def _score_with_params(model, scaler, items, params):
     model.mu = params["mu"]
     model.var = params["var"]
     try:
-        return _score_items(model, scaler, items)
+        return score_items(model, scaler, items)
     finally:
         model.pi = current["pi"]
         model.A = current["A"]
         model.mu = current["mu"]
         model.var = current["var"]
+
+
+def joined_sequence(items, order=JOIN_ORDER):
+    """Held-out single-activity files placed back to back as one sequence.
+
+    Each file is used at most once. The changes in the result are file
+    boundaries, not recorded transitions, and the figure title says so.
+    """
+    queues = {
+        name: [item for item in items if item["meta"]["activity"] == name]
+        for name in ACTIVITIES
+    }
+    features, labels, centers, paths = [], [], [], []
+    offset = 0.0
+    for name in order:
+        if not queues[name]:
+            continue
+        item = queues[name].pop(0)
+        features.append(item["features"])
+        labels.append(item["labels"])
+        centers.append(item["centers"] + offset)
+        paths.append(item["meta"]["path"])
+        offset += item["duration"]
+    return {
+        "features": np.concatenate(features),
+        "labels": np.concatenate(labels),
+        "centers": np.concatenate(centers),
+        "paths": paths,
+    }
+
+
+def decoded_example(model, scaler, pure_test, mixed_test):
+    """The sequence the decoded-path figure shows.
+
+    A held-out mixed recording when one exists. Otherwise held-out
+    single-activity files joined end to end.
+    """
+    if mixed_test:
+        item = mixed_test[0]
+        source = {
+            "features": item["features"],
+            "labels": item["labels"],
+            "centers": item["centers"],
+            "paths": [item["meta"]["path"]],
+        }
+        title = "Decoded activity on one held-out mixed recording"
+    else:
+        source = joined_sequence(pure_test)
+        title = "Decoded activity on held-out files joined end to end"
+    predicted = model.viterbi(scaler.transform(source["features"]))
+    return {
+        "centers": source["centers"],
+        "truth": source["labels"],
+        "predicted": predicted,
+        "paths": source["paths"],
+        "title": title,
+        "joined": not mixed_test,
+        "accuracy": float(np.mean(predicted == source["labels"])),
+    }
 
 
 def class_feature_means(splits, scaler):
@@ -151,9 +213,12 @@ def run(root=None):
     model, scaler, history, order, supervised = fit_model(splits)
     pure_test = [item for item in splits["test"] if item["meta"]["activity"] != "mixed"]
     mixed_test = [item for item in splits["test"] if item["meta"]["activity"] == "mixed"]
-    held_out = _score_items(model, scaler, pure_test)
-    mixed = _score_items(model, scaler, mixed_test)
-    supervised_score = _score_with_params(model, scaler, pure_test, supervised)
+    held_out = score_items(model, scaler, pure_test)
+    # Mixed recordings are optional. Without one, the decoded-path figure
+    # joins held-out single-activity files instead.
+    mixed = score_items(model, scaler, mixed_test) if mixed_test else None
+    supervised_score = score_with_params(model, scaler, pure_test, supervised)
+    example = decoded_example(model, scaler, pure_test, mixed_test)
 
     figures = root / "figures"
     figures.mkdir(parents=True, exist_ok=True)
@@ -172,8 +237,11 @@ def run(root=None):
         "Transition matrix",
         "To",
         "From",
-        ".2f",
+        ".3f",
     ).savefig(figures / "transition.png", dpi=150)
+    plot_emissions(model.mu, model.var, ACTIVITIES, FEATURE_NAMES).savefig(
+        figures / "emission.png", dpi=150
+    )
     plot_heatmap(
         held_out["confusion"],
         ACTIVITIES,
@@ -182,12 +250,12 @@ def run(root=None):
         "Recorded",
         "d",
     ).savefig(figures / "confusion.png", dpi=150)
-    example = mixed["decoded_example"]
     plot_decoded(
         example["centers"],
         example["truth"],
         example["predicted"],
         ACTIVITIES,
+        title=example["title"],
     ).savefig(figures / "decoded_sequence.png", dpi=150)
 
     import matplotlib.pyplot as plt
@@ -220,11 +288,13 @@ def run(root=None):
         "held_out_n_frames": held_out["n_frames"],
         "held_out_n_files": held_out["n_files"],
         "supervised_frame_accuracy": supervised_score["frame_accuracy"],
-        "mixed_frame_accuracy": mixed["frame_accuracy"],
-        "mixed_confusion": mixed["confusion"].tolist(),
-        "mixed_n_frames": mixed["n_frames"],
-        "mixed_n_files": mixed["n_files"],
-        "decoded_example": example["path"],
+        "mixed_frame_accuracy": mixed["frame_accuracy"] if mixed else None,
+        "mixed_confusion": mixed["confusion"].tolist() if mixed else None,
+        "mixed_n_frames": mixed["n_frames"] if mixed else 0,
+        "mixed_n_files": len(mixed_test),
+        "decoded_example": example["paths"],
+        "decoded_example_joined": example["joined"],
+        "decoded_example_accuracy": example["accuracy"],
         "feature_means_z": class_feature_means(splits, scaler),
         "sample_rates": rates,
         "duration_s": durations,
@@ -247,11 +317,14 @@ def _print_summary(payload):
         f"in {payload['iterations']} iters  "
         f"identity_align={payload['alignment_is_identity']}"
     )
+    mixed = payload["mixed_frame_accuracy"]
     print(
         f"held-out frame accuracy={payload['held_out_frame_accuracy']:.3f}  "
         f"file accuracy={payload['held_out_file_accuracy']:.3f}  "
         f"supervised={payload['supervised_frame_accuracy']:.3f}  "
-        f"mixed={payload['mixed_frame_accuracy']:.3f}"
+        f"mixed={'none' if mixed is None else f'{mixed:.3f}'}  "
+        f"decoded example={payload['decoded_example_accuracy']:.3f}"
+        f"{' (joined files)' if payload['decoded_example_joined'] else ''}"
     )
     for name, row in zip(ACTIVITIES, payload["held_out_frames"]):
         print(

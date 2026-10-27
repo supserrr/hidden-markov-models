@@ -1,0 +1,196 @@
+{
+  "self_test": {
+    "viterbi_accuracy": 1.0,
+    "loglik_start": -848.9747365824752,
+    "loglik_end": -848.93715215759,
+    "iterations": 5
+  },
+  "state_order_after_alignment": [
+    "standing",
+    "walking",
+    "jumping",
+    "still"
+  ],
+  "alignment_is_identity": true,
+  "iterations": 4,
+  "loglik_start": 9189.745966475637,
+  "loglik_end": 9471.093819156808,
+  "loglik_history": [
+    9189.745966475637,
+    9456.89513087345,
+    9471.093819156808,
+    9471.093819156808
+  ],
+  "transition": [
+    [
+      0.9984151939778133,
+      9.999999800000003e-09,
+      9.999999800000003e-09,
+      0.0015847860221870052
+    ],
+    [
+      9.999999700000012e-09,
+      0.9999999700000011,
+      9.999999700000012e-09,
+      9.999999700000012e-09
+    ],
+    [
+      9.999999700000008e-09,
+      9.999999700000008e-09,
+      0.9999999700000008,
+      9.999999700000008e-09
+    ],
+    [
+      0.003333333266666668,
+      9.999999800000003e-09,
+      9.999999800000003e-09,
+      0.9966666467333337
+    ]
+  ],
+  "pi": [
+    0.25,
+    0.25,
+    0.25,
+    0.25
+  ],
+  "held_out_frames": [
+    {
+      "support": 138,
+      "tp": 138,
+      "sensitivity": 1.0,
+      "specificity": 1.0,
+      "overall_accuracy": 1.0
+    },
+    {
+      "support": 134,
+      "tp": 134,
+      "sensitivity": 1.0,
+      "specificity": 1.0,
+      "overall_accuracy": 1.0
+    },
+    {
+      "support": 149,
+      "tp": 149,
+      "sensitivity": 1.0,
+      "specificity": 1.0,
+      "overall_accuracy": 1.0
+    },
+    {
+      "support": 160,
+      "tp": 160,
+      "sensitivity": 1.0,
+      "specificity": 1.0,
+      "overall_accuracy": 1.0
+    }
+  ],
+  "held_out_confusion": [
+    [
+      138,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      134,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      149,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      160
+    ]
+  ],
+  "held_out_frame_accuracy": 1.0,
+  "held_out_file_accuracy": 1.0,
+  "held_out_n_frames": 581,
+  "held_out_n_files": 40,
+  "supervised_frame_accuracy": 1.0,
+  "mixed_frame_accuracy": null,
+  "mixed_confusion": null,
+  "mixed_n_frames": 0,
+  "mixed_n_files": 0,
+  "decoded_example": [
+    "data/raw/still/still_041.csv",
+    "data/raw/standing/standing_041.csv",
+    "data/raw/walking/walking_041.csv",
+    "data/raw/jumping/jumping_041.csv",
+    "data/raw/walking/walking_042.csv",
+    "data/raw/standing/standing_042.csv",
+    "data/raw/still/still_042.csv"
+  ],
+  "decoded_example_joined": true,
+  "decoded_example_accuracy": 1.0,
+  "feature_means_z": {
+    "standing": [
+      -0.408980628927483,
+      -0.40653413381756187,
+      -0.4106854789880819,
+      -0.41053016967578637,
+      -0.5164549798111913,
+      0.9221865212424115,
+      -0.40910879009819934,
+      -0.3293245321274894,
+      0.1219048992315667
+    ],
+    "walking": [
+      0.4869748862367408,
+      0.3938249817163189,
+      0.45980644404551835,
+      0.5067408259069434,
+      0.5331621282012846,
+      -0.3923971436018934,
+      0.42938441671192545,
+      0.5362028851331574,
+      -0.17132129040800162
+    ],
+    "jumping": [
+      1.413509538667729,
+      1.4690652912887636,
+      1.4316555384390837,
+      1.4005996196053863,
+      0.7475438399875205,
+      -0.3020685085386486,
+      1.4427066187979092,
+      1.347703631459992,
+      0.1535770828771547
+    ],
+    "still": [
+      -1.2806032164329124,
+      -1.2488884848952748,
+      -1.2705807585120887,
+      -1.2852580195572407,
+      -0.6140394396200297,
+      -0.3334973436742895,
+      -1.2546769865239713,
+      -1.348812095858516,
+      -0.10968355207976407
+    ]
+  },
+  "sample_rates": {
+    "100": 200
+  },
+  "duration_s": {
+    "standing": 438.52,
+    "walking": 392.97000000000014,
+    "jumping": 399.0,
+    "still": 437.9599999999999
+  },
+  "files_per_activity": {
+    "standing": 50,
+    "walking": 50,
+    "jumping": 50,
+    "still": 50
+  },
+  "window_s": 1.0,
+  "hop_s": 0.5,
+  "target_fs": 50.0
+}

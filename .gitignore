@@ -5,3 +5,4 @@ __pycache__/
 .DS_Store
 screencapture-*.pdf
 node_modules/
+*.mov
