@@ -22,6 +22,9 @@ def _style():
     plt.rcParams.update(
         {
             "font.size": 11,
+            # Times New Roman to match the report; the others are fallbacks.
+            "font.family": "serif",
+            "font.serif": ["Times New Roman", "Times", "DejaVu Serif"],
             "axes.spines.top": False,
             "axes.spines.right": False,
             "figure.facecolor": "white",
@@ -40,7 +43,9 @@ def plot_raw_magnitude(examples):
     about four orders of magnitude, so the shared scale is logarithmic.
     """
     _style()
-    fig, axes = plt.subplots(4, 1, figsize=(8.2, 6.4), sharex=True, sharey=True)
+    # Each figure is sized close to its printed width in the report, so 11 pt
+    # text still reads at about 8 pt on paper.
+    fig, axes = plt.subplots(4, 1, figsize=(4.3, 3.36), sharex=True, sharey=True)
     for ax, name in zip(axes, ACTIVITIES):
         time, magnitude = examples[name]
         ax.plot(time, np.maximum(magnitude, 1e-4), color=COLORS[name], linewidth=1.0)
@@ -48,10 +53,7 @@ def plot_raw_magnitude(examples):
         ax.set_ylabel("m/s²")
         ax.set_title(name.capitalize(), loc="left", fontsize=11)
     axes[-1].set_xlabel("Time (s)")
-    fig.suptitle(
-        "Accelerometer magnitude without gravity, one held-out file per activity",
-        fontsize=13,
-    )
+    fig.suptitle("Acceleration magnitude, one held-out file each", fontsize=11)
     fig.tight_layout()
     return fig
 
@@ -69,9 +71,11 @@ def plot_likelihood(history):
 
 def plot_heatmap(matrix, names, title, xlabel, ylabel, fmt):
     _style()
-    fig, ax = plt.subplots(figsize=(6.2, 5.2))
+    fig, ax = plt.subplots(figsize=(3.6, 3.02))
     image = ax.imshow(matrix, cmap="Blues")
-    ax.set_xticks(range(len(names)), [name.capitalize() for name in names])
+    ax.set_xticks(
+        range(len(names)), [name.capitalize() for name in names], rotation=30, ha="right"
+    )
     ax.set_yticks(range(len(names)), [name.capitalize() for name in names])
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -94,7 +98,7 @@ def plot_emissions(mu, var, names, features):
     reader does not compare it with the raw value.
     """
     _style()
-    fig, ax = plt.subplots(figsize=(10.5, 4.4))
+    fig, ax = plt.subplots(figsize=(7.5, 3.14))
     limit = float(np.max(np.abs(mu)))
     image = ax.imshow(mu, cmap="RdBu_r", vmin=-limit, vmax=limit, aspect="auto")
     labels = [f"log {name}" if name in LOG_FEATURES else name for name in features]
@@ -126,7 +130,7 @@ def plot_decoded(
     _style()
     # Transition windows (-1) have no recorded activity, so the line breaks there.
     truth = np.where(np.asarray(truth) < 0, np.nan, truth)
-    fig, ax = plt.subplots(figsize=(8.2, 3.6))
+    fig, ax = plt.subplots(figsize=(5.5, 2.41))
     ax.step(time, truth, where="mid", color="#4C78A8", linewidth=2.0, label="Recorded activity")
     ax.step(
         time,
@@ -141,6 +145,7 @@ def plot_decoded(
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Activity")
     ax.set_title(title)
-    ax.legend(frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=2)
-    fig.tight_layout()
+    fig.legend(frameon=False, loc="lower center", ncol=2)
+    # Keep the bottom strip for the legend so it never sits on the axis label.
+    fig.tight_layout(rect=(0, 0.1, 1, 1))
     return fig
