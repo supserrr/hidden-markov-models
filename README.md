@@ -35,12 +35,12 @@ This refits the model and writes `results/`. After adding Sensor Logger zips to 
 
 200 Sensor Logger recordings from one iPhone 16 Pro at 100 Hz: 50 each of standing, walking, jumping, and still, 5.6 to 9.9 seconds long. The last 10 of each activity are the test set. See [data/README.md](data/README.md).
 
-| Activity | Video |
-| --- | --- |
-| Standing | PASTE_LINK |
-| Walking | PASTE_LINK |
-| Jumping | PASTE_LINK |
-| Still | PASTE_LINK |
+| Activity | 5-second clip | Longer clip, ending on the Sensor Logger screen |
+| --- | --- | --- |
+| Standing | [standing.mp4](videos/standing.mp4) | [standing_long.mp4](videos/standing_long.mp4) |
+| Walking | [walking.mp4](videos/walking.mp4) | [walking_long.mp4](videos/walking_long.mp4) |
+| Jumping | [jumping.mp4](videos/jumping.mp4) | [jumping_long.mp4](videos/jumping_long.mp4) |
+| Still | [still.mp4](videos/still.mp4) | [still_long.mp4](videos/still_long.mp4) |
 
 ## Model
 
@@ -54,4 +54,5 @@ notebooks/   the full pipeline, with outputs
 src/         converter, features, HMM, experiment
 results/     figures and metrics
 report/      the written report
+videos/      data collection clips
 ```
