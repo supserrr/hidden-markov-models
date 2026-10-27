@@ -129,6 +129,86 @@
   ],
   "decoded_example_joined": true,
   "decoded_example_accuracy": 1.0,
+  "unseen_frames": [
+    {
+      "support": 104,
+      "tp": 102,
+      "sensitivity": 0.9807692307692307,
+      "specificity": 0.9947643979057592,
+      "overall_accuracy": 0.9897119341563786
+    },
+    {
+      "support": 147,
+      "tp": 146,
+      "sensitivity": 0.9931972789115646,
+      "specificity": 0.9941002949852508,
+      "overall_accuracy": 0.9897119341563786
+    },
+    {
+      "support": 124,
+      "tp": 124,
+      "sensitivity": 1.0,
+      "specificity": 0.9972375690607734,
+      "overall_accuracy": 0.9897119341563786
+    },
+    {
+      "support": 111,
+      "tp": 109,
+      "sensitivity": 0.9819819819819819,
+      "specificity": 1.0,
+      "overall_accuracy": 0.9897119341563786
+    }
+  ],
+  "unseen_confusion": [
+    [
+      102,
+      2,
+      0,
+      0
+    ],
+    [
+      0,
+      146,
+      1,
+      0
+    ],
+    [
+      0,
+      0,
+      124,
+      0
+    ],
+    [
+      2,
+      0,
+      0,
+      109
+    ]
+  ],
+  "unseen_frame_accuracy": 0.9897119341563786,
+  "unseen_n_frames": 486,
+  "unseen_n_files": 22,
+  "unseen_files_per_activity": {
+    "standing": 5,
+    "walking": 5,
+    "jumping": 5,
+    "still": 5,
+    "mixed": 2
+  },
+  "unseen_single_frame_accuracy": 0.9922779922779923,
+  "unseen_single_file_accuracy": 1.0,
+  "unseen_mixed_frame_accuracy": 0.986784140969163,
+  "unseen_mixed_n_frames": 227,
+  "unseen_decoded": [
+    {
+      "path": "data/unseen/processed/mixed/mixed_001.csv",
+      "accuracy": 0.9826086956521739
+    },
+    {
+      "path": "data/unseen/processed/mixed/mixed_002.csv",
+      "accuracy": 0.9910714285714286
+    }
+  ],
   "feature_means_z": {
     "standing": [
       -0.408980628927483,

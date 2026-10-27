@@ -6,6 +6,10 @@ import numpy as np
 
 ACTIVITIES = ["standing", "walking", "jumping", "still"]
 
+# Label for a span of a mixed recording between two activities, such as
+# picking the phone up. It keeps the timeline whole and is never scored.
+TRANSITION = "transition"
+
 # One second at the common rate. A walk step is about half a second, so the
 # window covers at least one full step and the FFT bin width is 1 Hz.
 TARGET_FS = 50.0

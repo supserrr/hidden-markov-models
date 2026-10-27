@@ -42,7 +42,11 @@ def _sequence(path):
     index = np.clip(index, 0, len(activities) - 1)
     labels = [activities[int(i)] for i in index]
     features, frame_labels, centers = frames_from_resampled(acc_r, gyro_r, labels)
-    coded = np.array([ACTIVITIES.index(label) for label in frame_labels], dtype=int)
+    # A transition window has no true activity, so it is coded -1 and not scored.
+    coded = np.array(
+        [ACTIVITIES.index(label) if label in ACTIVITIES else -1 for label in frame_labels],
+        dtype=int,
+    )
     magnitude = np.linalg.norm(acc_r, axis=1)
     duration = float(grid[-1] - grid[0])
     return {
@@ -57,7 +61,7 @@ def _sequence(path):
 
 def load_splits(root=None):
     root = Path(root) if root else repo_root()
-    groups = {"train": [], "test": []}
+    groups = {"train": [], "test": [], "unseen": []}
     rows = recording_rows(root)
     if not rows:
         raise FileNotFoundError(
@@ -72,6 +76,8 @@ def load_splits(root=None):
 
 def fit_model(splits, log=True):
     train = splits["train"]
+    if any(np.any(item["labels"] < 0) for item in train):
+        raise ValueError("transition spans are for scoring only; keep them out of training")
     raw = np.concatenate([item["features"] for item in train], axis=0)
     scaler = FeatureScaler(log=log).fit(raw)
     sequences = [scaler.transform(item["features"]) for item in train]
@@ -99,10 +105,13 @@ def score_items(model, scaler, items):
     file_hits = []
     for item in items:
         features = scaler.transform(item["features"])
+        # Viterbi runs on the whole recording, transitions included, so the
+        # chain sees the real timeline. Only windows with an activity count.
         path = model.viterbi(features)
-        truth.append(item["labels"])
-        predicted.append(path)
-        file_hits.append(int(majority_label(path) == majority_label(item["labels"])))
+        scored = item["labels"] >= 0
+        truth.append(item["labels"][scored])
+        predicted.append(path[scored])
+        file_hits.append(int(majority_label(path[scored]) == majority_label(item["labels"][scored])))
     truth = np.concatenate(truth)
     predicted = np.concatenate(predicted)
     matrix = confusion_matrix(truth, predicted, len(ACTIVITIES))
@@ -181,6 +190,7 @@ def decoded_example(model, scaler, pure_test, mixed_test):
         source = joined_sequence(pure_test)
         title = "Decoded activity on held-out files joined end to end"
     predicted = model.viterbi(scaler.transform(source["features"]))
+    scored = source["labels"] >= 0
     return {
         "centers": source["centers"],
         "truth": source["labels"],
@@ -188,7 +198,7 @@ def decoded_example(model, scaler, pure_test, mixed_test):
         "paths": source["paths"],
         "title": title,
         "joined": not mixed_test,
-        "accuracy": float(np.mean(predicted == source["labels"])),
+        "accuracy": float(np.mean(predicted[scored] == source["labels"][scored])),
     }
 
 
@@ -219,6 +229,14 @@ def run(root=None):
     mixed = score_items(model, scaler, mixed_test) if mixed_test else None
     supervised_score = score_with_params(model, scaler, pure_test, supervised)
     example = decoded_example(model, scaler, pure_test, mixed_test)
+    # The unseen split is a later session. It plays no part in fitting or in
+    # the held-out numbers above, and it is scored on its own.
+    unseen_items = splits["unseen"]
+    unseen_single = [item for item in unseen_items if item["meta"]["activity"] != "mixed"]
+    unseen_mixed = [item for item in unseen_items if item["meta"]["activity"] == "mixed"]
+    unseen = score_items(model, scaler, unseen_items) if unseen_items else None
+    unseen_single_score = score_items(model, scaler, unseen_single) if unseen_single else None
+    unseen_mixed_score = score_items(model, scaler, unseen_mixed) if unseen_mixed else None
 
     results = root / "results"
     figures = results / "figures"
@@ -258,6 +276,32 @@ def run(root=None):
         ACTIVITIES,
         title=example["title"],
     ).savefig(figures / "decoded_sequence.png", dpi=150)
+    if unseen:
+        plot_heatmap(
+            unseen["confusion"],
+            ACTIVITIES,
+            "Confusion matrix on the unseen session",
+            "Predicted",
+            "Recorded",
+            "d",
+        ).savefig(figures / "confusion_unseen.png", dpi=150)
+    unseen_decoded = []
+    for number, item in enumerate(unseen_mixed, start=1):
+        predicted = model.viterbi(scaler.transform(item["features"]))
+        scored = item["labels"] >= 0
+        unseen_decoded.append(
+            {
+                "path": item["meta"]["path"],
+                "accuracy": float(np.mean(predicted[scored] == item["labels"][scored])),
+            }
+        )
+        plot_decoded(
+            item["centers"],
+            item["labels"],
+            predicted,
+            ACTIVITIES,
+            title=f"Decoded activity on unseen continuous recording {number}",
+        ).savefig(figures / f"decoded_unseen_{number}.png", dpi=150)
 
     import matplotlib.pyplot as plt
 
@@ -266,7 +310,11 @@ def run(root=None):
     rates = {}
     durations = {name: 0.0 for name in ACTIVITIES}
     file_counts = {name: 0 for name in ACTIVITIES}
+    unseen_counts = {name: 0 for name in ACTIVITIES + ["mixed"]}
     for row in recording_rows(root):
+        if row["split"] == "unseen":
+            unseen_counts[row["activity"]] += 1
+            continue
         rates[row["sample_rate_hz"]] = rates.get(row["sample_rate_hz"], 0) + 1
         if row["activity"] in durations:
             durations[row["activity"]] += float(row["duration_s"])
@@ -296,6 +344,23 @@ def run(root=None):
         "decoded_example": example["paths"],
         "decoded_example_joined": example["joined"],
         "decoded_example_accuracy": example["accuracy"],
+        "unseen_frames": unseen["metrics"] if unseen else None,
+        "unseen_confusion": unseen["confusion"].tolist() if unseen else None,
+        "unseen_frame_accuracy": unseen["frame_accuracy"] if unseen else None,
+        "unseen_n_frames": unseen["n_frames"] if unseen else 0,
+        "unseen_n_files": len(unseen_items),
+        "unseen_files_per_activity": unseen_counts,
+        "unseen_single_frame_accuracy": (
+            unseen_single_score["frame_accuracy"] if unseen_single_score else None
+        ),
+        "unseen_single_file_accuracy": (
+            unseen_single_score["file_accuracy"] if unseen_single_score else None
+        ),
+        "unseen_mixed_frame_accuracy": (
+            unseen_mixed_score["frame_accuracy"] if unseen_mixed_score else None
+        ),
+        "unseen_mixed_n_frames": unseen_mixed_score["n_frames"] if unseen_mixed_score else 0,
+        "unseen_decoded": unseen_decoded,
         "feature_means_z": class_feature_means(splits, scaler),
         "sample_rates": rates,
         "duration_s": durations,
@@ -326,6 +391,20 @@ def _print_summary(payload):
         f"{' (joined files)' if payload['decoded_example_joined'] else ''}"
     )
     for name, row in zip(ACTIVITIES, payload["held_out_frames"]):
+        print(
+            f"  {name:10} n={row['support']:4d}  "
+            f"sens={row['sensitivity']:.3f}  spec={row['specificity']:.3f}"
+        )
+    if payload["unseen_frames"] is None:
+        return
+    single = payload["unseen_single_frame_accuracy"]
+    mixed = payload["unseen_mixed_frame_accuracy"]
+    print(
+        f"unseen frame accuracy={payload['unseen_frame_accuracy']:.3f}  "
+        f"single-activity={'none' if single is None else f'{single:.3f}'}  "
+        f"continuous={'none' if mixed is None else f'{mixed:.3f}'}"
+    )
+    for name, row in zip(ACTIVITIES, payload["unseen_frames"]):
         print(
             f"  {name:10} n={row['support']:4d}  "
             f"sens={row['sensitivity']:.3f}  spec={row['specificity']:.3f}"

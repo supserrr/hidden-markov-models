@@ -124,6 +124,8 @@ def plot_decoded(
     time, truth, predicted, names, title="Decoded activity on one held-out mixed recording"
 ):
     _style()
+    # Transition windows (-1) have no recorded activity, so the line breaks there.
+    truth = np.where(np.asarray(truth) < 0, np.nan, truth)
     fig, ax = plt.subplots(figsize=(8.2, 3.6))
     ax.step(time, truth, where="mid", color="#4C78A8", linewidth=2.0, label="Recorded activity")
     ax.step(
