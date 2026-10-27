@@ -1,4 +1,4 @@
-"""Train the HMM and write metrics plus figures."""
+"""Train the HMM and write metrics plus figures to results/."""
 
 from __future__ import annotations
 
@@ -61,7 +61,7 @@ def load_splits(root=None):
     rows = recording_rows(root)
     if not rows:
         raise FileNotFoundError(
-            "No recordings yet. Run `python -m src.convert` to build data/ from RECORDINGS/."
+            "No recordings yet. Run `python -m src.convert` to build data/processed/ from data/raw/."
         )
     for row in rows:
         item = _sequence(root / row["path"])
@@ -220,7 +220,8 @@ def run(root=None):
     supervised_score = score_with_params(model, scaler, pure_test, supervised)
     example = decoded_example(model, scaler, pure_test, mixed_test)
 
-    figures = root / "figures"
+    results = root / "results"
+    figures = results / "figures"
     figures.mkdir(parents=True, exist_ok=True)
     examples = {}
     for name in ACTIVITIES:
@@ -303,9 +304,7 @@ def run(root=None):
         "hop_s": HOP / TARGET_FS,
         "target_fs": TARGET_FS,
     }
-    report_dir = root / "report"
-    report_dir.mkdir(parents=True, exist_ok=True)
-    (report_dir / "metrics.json").write_text(json.dumps(payload, indent=2))
+    (results / "metrics.json").write_text(json.dumps(payload, indent=2))
     _print_summary(payload)
     return payload
 

@@ -3,6 +3,9 @@ __pycache__/
 .ipynb_checkpoints/
 *.pyc
 .DS_Store
-screencapture-*.pdf
 node_modules/
+
+# Local only: the assignment brief and the uncut collection videos (each over GitHub's file limit).
+docs/assignment_brief.pdf
+videos/
 *.mov

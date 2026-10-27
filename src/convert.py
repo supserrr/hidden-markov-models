@@ -1,10 +1,10 @@
 """Turn Sensor Logger exports into project CSVs and rebuild the manifest.
 
-Each zip under RECORDINGS/<Activity>/ is one recording. On iOS,
-Accelerometer.csv is user acceleration with gravity already removed, in
-m/s^2, and Gyroscope.csv is rad/s. Both carry `seconds_elapsed`, which
-becomes `timestamp`. The converter owns data/raw: every run rewrites the
-CSVs there from the zips.
+Each zip under data/raw/<activity>/ is one recording, exactly as Sensor
+Logger exported it. On iOS, Accelerometer.csv is user acceleration with
+gravity already removed, in m/s^2, and Gyroscope.csv is rad/s. Both carry
+`seconds_elapsed`, which becomes `timestamp`. The converter owns
+data/processed: every run rewrites the CSVs there from the zips.
 
 Run from the repository root:
 
@@ -66,6 +66,14 @@ def read_export(path):
     return acc_t - acc_t[0], acc, gyro
 
 
+def _relative(path, root):
+    """Repository-relative path when the export lives inside the repository."""
+    try:
+        return Path(path).resolve().relative_to(Path(root).resolve()).as_posix()
+    except ValueError:
+        return Path(path).as_posix()
+
+
 def activity_folders(recordings):
     """Map each activity to its folder, ignoring case and trailing spaces."""
     found = {}
@@ -78,7 +86,7 @@ def activity_folders(recordings):
 
 def convert(recordings=None, root=None, test_per_activity=TEST_PER_ACTIVITY):
     root = Path(root) if root else repo_root()
-    recordings = Path(recordings) if recordings else root / "RECORDINGS"
+    recordings = Path(recordings) if recordings else root / "data" / "raw"
     folders = activity_folders(recordings)
     missing = [name for name in ACTIVITIES if name not in folders]
     if missing:
@@ -88,13 +96,13 @@ def convert(recordings=None, root=None, test_per_activity=TEST_PER_ACTIVITY):
     for name in ACTIVITIES:
         # Sensor Logger names each zip by its start time, so name order is time order.
         exports = sorted(folders[name].glob("*.zip"))
-        out_dir = root / "data" / "raw" / name
+        out_dir = root / "data" / "processed" / name
         for stale in out_dir.glob(f"{name}_*.csv"):
             stale.unlink()
         first_test = len(exports) - test_per_activity
         for index, export in enumerate(exports):
             timestamps, acc, gyro = read_export(export)
-            relative = Path("data") / "raw" / name / f"{name}_{index + 1:03d}.csv"
+            relative = Path("data") / "processed" / name / f"{name}_{index + 1:03d}.csv"
             write_recording(root / relative, timestamps, acc, gyro, [name] * len(timestamps))
             rows.append(
                 {
@@ -105,7 +113,7 @@ def convert(recordings=None, root=None, test_per_activity=TEST_PER_ACTIVITY):
                     "sample_rate_hz": f"{1.0 / np.median(np.diff(timestamps)):.0f}",
                     "duration_s": f"{timestamps[-1]:.2f}",
                     "n_rows": len(timestamps),
-                    "origin": f"{export.parent.name.strip()}/{export.name}",
+                    "origin": _relative(export, root),
                 }
             )
 

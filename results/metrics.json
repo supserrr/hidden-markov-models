@@ -119,13 +119,13 @@
   "mixed_n_frames": 0,
   "mixed_n_files": 0,
   "decoded_example": [
-    "data/raw/still/still_041.csv",
-    "data/raw/standing/standing_041.csv",
-    "data/raw/walking/walking_041.csv",
-    "data/raw/jumping/jumping_041.csv",
-    "data/raw/walking/walking_042.csv",
-    "data/raw/standing/standing_042.csv",
-    "data/raw/still/still_042.csv"
+    "data/processed/still/still_041.csv",
+    "data/processed/standing/standing_041.csv",
+    "data/processed/walking/walking_041.csv",
+    "data/processed/jumping/jumping_041.csv",
+    "data/processed/walking/walking_042.csv",
+    "data/processed/standing/standing_042.csv",
+    "data/processed/still/still_042.csv"
   ],
   "decoded_example_joined": true,
   "decoded_example_accuracy": 1.0,
