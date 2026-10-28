@@ -32,7 +32,7 @@ The last 10 recordings of each activity: 40 files, 581 windows.
 | Jumping | 149 | 1.000 | 1.000 | 1.000 |
 | Still | 160 | 1.000 | 1.000 | 1.000 |
 
-Everything comes from one phone, so this shows the activities stay apart across two sessions, not that the model transfers to other people or phones. The [report](report/Formative_2_Hidden_Markov_Models.pdf) and the [notebook](notebooks/hmm_activity_recognition.ipynb) have the details.
+Everything comes from one phone, so this shows the activities stay apart across two sessions, not that the model transfers to other people or phones. The [report](report/Formative_2_Hidden_Markov_Models.docx) and the [notebook](notebooks/hmm_activity_recognition.ipynb) have the details.
 
 ## Run it
 
